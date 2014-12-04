@@ -2,10 +2,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "filesystem.h"
-#include "vdisk.h"
 
 #define LINESIZE 16
 #define SECSIZE 512
+
+extern int disk_n;
 
 int main(int argc, char *argv[])
 {
@@ -17,29 +18,17 @@ int main(int argc, char *argv[])
 	}
 
 	secl = atoi(argv[1]);
-	struct SECBOOT t;
 	// Por default siempre sera el disco cero
-	// Leemos los parámetros del disco
-	vdreadsector(0, 0, 0, 1, 1, (char*) &t);
-
-	if (secl < 1 || secl > (t.sec_log_unidad + 1)) {
-		fprintf(stderr,
-			"Sector lógico fuera del espacio de direcciones del disco\n");
+	disk_n = 0;
+	if (calculateParams(secl, &head, &cyl, &secf) == -1) {
+		fprintf(stderr, "No fue posible calcular los parámetros de lectura física\n");
 		exit(-1);
 	}
-	secl --;
-	// Calculamos el número de la superficie
-	head = (int) (secl / (t.cyls * t.secfis));
-	secl -= head * t.cyls * t.secfis;
-	// Calculamos el número de cilindro
-	cyl = (int) (secl / t.secfis);
-	secl -= cyl * t.secfis;
-	// Calculamos el número de sector físico
-	secf = secl + 1;//+ 1;
 
-	printf("Superficie = %d, Cilindro = %d, SectorF = %d\n\n", head, cyl, secf);
+	printf("Superficie = %d, Cilindro = %d, SectorF = %d\n\n",
+		head, cyl, secf);
 
-	if(vdreadsector(0, head, cyl, secf, 1, buffer) == -1) {
+	if(vdreadsector(disk_n, head, cyl, secf, 1, buffer) == -1) {
 		fprintf(stderr,"Error al abrir disco virtual\n");
 		exit(1);
 	}

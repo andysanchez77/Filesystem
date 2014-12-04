@@ -44,37 +44,39 @@ int format(int disk_number) {
 	struct SECBOOT t;
 	sprintf(t.nombre_disco, "disco%d.vd", disk_number);
 	t.sec_res = 1;
-	t.sec_mapa_bits_nodos_i = 2;
-	t.sec_mapa_bits_bloques = 3;
-	t.sec_tabla_nodos_i = 9;
+	t.sec_mapa_bits_nodos_i = 1;
+	t.sec_mapa_bits_bloques = 2;
+	t.sec_tabla_nodos_i = 8;
 	t.sec_log_unidad = 17600;
 	t.sec_x_bloque = 4;
 	t.heads = 16;
 	t.cyls = 100;
 	t.secfis = 11;
 
-	if (vdwritesector(disk_number, 0, 0, t.sec_res, 1,  (char*) &t) != 1) {
+	int count_secf = 1;
+	if (vdwritesector(disk_number, 0, 0, count_secf, t.sec_res,  (char*) &t) != 1) {
 		fprintf(stderr,
 			"Ocurrió un error mientras escribíamos la tabla de parámetros\n");
 	}
 	printf("Éxito escribiendo la tabla de parámetros en el disco\n");
-
+	count_secf += t.sec_res;
 	// Procedemos ahora a limpiar los bits del mapa de bits de nodos-i
 	char buff[SECTOR_SIZE];
 	memset(buff, 0x00, SECTOR_SIZE);
-	if (vdwritesector(disk_number, 0, 0, t.sec_mapa_bits_nodos_i, 1,  buff)
-		!= 1) {
-			fprintf(stderr,
-				"Ocurrió un error al querer limpiar el mapa de bits de nodos-i\n");
+	if (vdwritesector(disk_number, 0, 0, count_secf, t.sec_mapa_bits_nodos_i,  buff) == -1) {
+		fprintf(stderr,"Ocurrió un error al querer limpiar el mapa de bits de nodos-i\n");
 	}
 	printf("Éxito escribiendo el mapa de bits de nodos-i en el disco\n");
+	
+	count_secf += t.sec_mapa_bits_nodos_i;
 
+	char buff2[SECTOR_SIZE * 2];
+	memset(buff2, 0x00, SECTOR_SIZE * 2);
+	buff2[0] =1; 
 	// Ahora solo cambiamos el primer bit para el mapa de bits del área de datos
-	buff[0] = 0x01;
-	if (vdwritesector(disk_number, 0, 0, t.sec_mapa_bits_bloques, 1,  buff)
-		!= 1) {
-			fprintf(stderr,
-				"Ocurrió un error al querer limpiar el mapa de bits de datos\n");
-	}
+	if (vdwritesector(disk_number, 0, 0, count_secf, t.sec_mapa_bits_bloques,  buff2) == -1) {
+		fprintf(stderr,"Ocurrió un error al querer limpiar el mapa de bits de datos\n");
+		}
 	printf("Éxito escribiendo el mapa de bits de datosen el disco\n");
+	
 }
