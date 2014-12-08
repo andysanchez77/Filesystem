@@ -1,8 +1,10 @@
-all:
-	# TODO
+all: createvd dumpseclog formatvd test shell
+	
 
 clean:
 	rm disco*.vd
+	rm test
+	rm shell
 
 createvd: createvd.c filesystem.h
 	gcc -o createvd createvd.c filesystem.h
@@ -16,5 +18,17 @@ dumpseclog: dumpseclog.c vdisk.h vdisk.c
 formatvd: formatvd.c vdisk.h vdisk.c
 	gcc -o formatvd formatvd.c vdisk.h vdisk.c filesystem.h -std=gnu99
 
-filesystem: filesystem.h filesystem.c vdisk.h vdisk.c
-	gcc -o filesystem filesystem.c vdisk.h vdisk.c filesystem.h -std=gnu99
+#test: filesystem.h filesystem.c vdisk.h vdisk.c Archivos.c Archivos.h
+#	gcc -o test main.c filesystem.h filesystem.c vdisk.h vdisk.c Archivos.c Archivos.h -std=gnu99 -D ACTIVE_DEBUG
+
+shell: 	filesystem.h filesystem.c vdisk.h vdisk.c Archivos.c Archivos.h
+	gcc -o shell Shell.c filesystem.h filesystem.c vdisk.h vdisk.c Archivos.c Archivos.h -std=gnu99
+
+tshell: filesystem.h filesystem.c vdisk.h vdisk.c Archivos.c Archivos.h
+	gcc -o shell Shell.c filesystem.h filesystem.c vdisk.h vdisk.c Archivos.c Archivos.h -std=gnu99 -D ACTIVE_DEBUG
+
+erase:
+	rm disco*.vd
+disc:
+	./createvd 0
+	./formatvd 0

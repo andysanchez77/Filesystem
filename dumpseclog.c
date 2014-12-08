@@ -20,6 +20,7 @@ int main(int argc, char *argv[])
 	secl = atoi(argv[1]);
 	// Por default siempre sera el disco cero
 	disk_n = 0;
+	load_sec_boot();
 	if (calculateParams(secl, &head, &cyl, &secf) == -1) {
 		fprintf(stderr, "No fue posible calcular los parámetros de lectura física\n");
 		exit(-1);
