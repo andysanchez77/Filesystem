@@ -386,10 +386,9 @@ int vdclose(int fd){
 
 	currinode = openfiles[fd].inode;
 
-	sector = (currinode/8);
-
-	result = vdwritesl(get_secl_tabla_nodos_i()+sector, 
-					  (char *) &inodes[sector *8]);
+	sector = (int)(currinode/8);
+	DEBUG("Close: sector = %d %d  %d\n", sector, (get_secl_tabla_nodos_i()+sector),sector*8 );
+	vdwritesl((get_secl_tabla_nodos_i()+sector),(char *) &inodes[sector*8]);
 
 	currblock = openfiles[fd].currbloqueenmemoria;
 	if(currblock != -1){
@@ -400,8 +399,9 @@ int vdclose(int fd){
 			writeblock(currblock, openfiles[fd].buffer);
 		}
 	}
-	writeblock(inodes[currinode].indirect1, 
-			  (char *) openfiles[fd].buffindirect);
+	if (inodes[currinode].indirect1 != 0)
+		writeblock(inodes[currinode].indirect1, 
+				  (char *) openfiles[fd].buffindirect);
 	openfiles[fd].inuse = 0;
 	openfiles[fd].currbloqueenmemoria = -1;
 	memset(openfiles[fd].buffer,0,2048);

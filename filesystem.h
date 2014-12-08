@@ -9,7 +9,7 @@
 #define INODE_SIZE      64
 
 
-static int debug = 1;
+static int debug = 0;
 #define DEBUG if(debug) printf
 
 struct SECBOOT {	
