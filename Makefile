@@ -1,5 +1,4 @@
-all: createvd dumpseclog formatvd test shell
-	
+all: createvd dumpseclog formatvd shell
 
 clean:
 	rm disco*.vd
@@ -17,6 +16,9 @@ dumpseclog: dumpseclog.c vdisk.h vdisk.c
 
 formatvd: formatvd.c vdisk.h vdisk.c
 	gcc -o formatvd formatvd.c vdisk.h vdisk.c filesystem.h -std=gnu99
+
+gui: vdisk.h vdisk.c filesystem.h filesystem.c Archivos.c Archivos.h gui_utils.h gui_utils.c gui.h gui.c
+	gcc -o gui vdisk.h vdisk.c filesystem.h filesystem.c Archivos.c Archivos.h gui_utils.h gui_utils.c gui.h gui.c `pkg-config --libs --cflags gtk+-2.0` -std=gnu99 -Wimplicit-function-declaration
 
 #test: filesystem.h filesystem.c vdisk.h vdisk.c Archivos.c Archivos.h
 #	gcc -o test main.c filesystem.h filesystem.c vdisk.h vdisk.c Archivos.c Archivos.h -std=gnu99 -D ACTIVE_DEBUG
