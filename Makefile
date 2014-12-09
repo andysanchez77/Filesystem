@@ -15,15 +15,10 @@ dumpseclog: dumpseclog.c vdisk.h vdisk.c
 formatvd: formatvd.c vdisk.h vdisk.c
 	gcc -o formatvd formatvd.c vdisk.h vdisk.c filesystem.h -std=gnu99
 
-<<<<<<< HEAD
-=======
 gui: vdisk.h vdisk.c filesystem.h filesystem.c Archivos.c Archivos.h gui_utils.h gui_utils.c gui.h gui.c
 	gcc -o gui vdisk.h vdisk.c filesystem.h filesystem.c Archivos.c Archivos.h gui_utils.h gui_utils.c gui.h gui.c `pkg-config --libs --cflags gtk+-2.0` -std=gnu99 -Wimplicit-function-declaration
 
-#test: filesystem.h filesystem.c vdisk.h vdisk.c Archivos.c Archivos.h
-#	gcc -o test main.c filesystem.h filesystem.c vdisk.h vdisk.c Archivos.c Archivos.h -std=gnu99 -D ACTIVE_DEBUG
 
->>>>>>> 3e2c2fbb3859aff2ffa47812197f1275d496bd98
 shell: 	filesystem.h filesystem.c vdisk.h vdisk.c Archivos.c Archivos.h
 	gcc -o shell Shell.c filesystem.h filesystem.c vdisk.h vdisk.c Archivos.c Archivos.h -std=gnu99
 
