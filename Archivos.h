@@ -1,4 +1,5 @@
 #include "filesystem.h"
+#include <unistd.h>
 
 struct OPENFILES {
 	int inuse;

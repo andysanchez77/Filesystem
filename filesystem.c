@@ -23,9 +23,9 @@ int calculateParams(int secl, int *head, int *cyl, int *secf) {
 			"Sector lógico fuera del espacio de direcciones del disco\n");
 		return -1;
 	}
-	*head = (secl / 11) % secboot.heads;
-	*cyl = (secl / (11 * secboot.heads));
-	*secf = (secl % 11) + 1;
+	*head = (secl / secboot.secfis) % secboot.heads;
+	*cyl = (secl / (secboot.secfis * secboot.heads));
+	*secf = (secl % secboot.secfis) + 1;
 	return 1;
 }
 
@@ -260,6 +260,7 @@ int nextfreeblock(){
         if (bloque <= valid_block)
             return bloque;
     }
+    fprintf(stderr, "Sistema de archivos lleno\n");
     return -1;
 }
 
@@ -397,7 +398,7 @@ int setninode(int num, char *filename, unsigned short atribs,
 	if(num<0||num>63)
 		return -1;
 
-	int i;
+	int i, tmp, initnoi;
 	//Checar si el sector del superbloque está en secboot_en_memoria
     load_sec_boot();
     //Checar que mapa de nodos i esté en memoria
@@ -421,10 +422,12 @@ int setninode(int num, char *filename, unsigned short atribs,
 	inodes[num].indirect1=0;
 	inodes[num].indirect2=0;
 
-	i = (int) num/8;
+	i = (int) (num/8);
+
 	DEBUG("Saving '%s' on inode %d i = %d ptr = %d ", inodes[num].name, num, get_secl_tabla_nodos_i()+i,  &(inodes[i*8+8]) );
 	assigninode(num);
-	vdwritesl(get_secl_tabla_nodos_i()+i, (char *) &(inodes[i*8]));
+
+	vdwritesl((get_secl_tabla_nodos_i()+i), (char *) &inodes[i*8]);
 	
 	return num;
 }

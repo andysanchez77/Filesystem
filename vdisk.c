@@ -48,7 +48,7 @@ int vdwritesector(int drive, int head, int cylinder, int sector, int nsecs, char
     // Calcula la posición en el archivo
     sl=cylinder*SECTORS*HEADS+head*SECTORS+(sector-1);
     offset=sl*512;
-    lseek(fp,offset,SEEK_SET);
+    lseek(fp,offset,SEEK_SET); 
     write(fp,buffer,512*nsecs);
     close(fp);
     return(nsecs);

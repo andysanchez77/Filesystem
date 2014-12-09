@@ -24,6 +24,9 @@ int catv(char *arg1);
 int catu(char *arg1);
 int dirv();
 int diru(char *arg1);
+int offsetv(char *arg1, char *arg2, char *arg3);
+int delete_all_v();
+
 
 int main(){
 	char linea[MAXLEN];
@@ -38,10 +41,11 @@ int main(){
 	// 	 	a2[1] = (char) i;
 	//  		copyuv(a1, a2);
 	//  		n++;
-	//  		if(n == 40) break;
+	//  		if(n == 33) break;
 	// 	}
-	// 	if(n == 40) break;
+	// 	if(n == 33) break;
 	// }
+
 	while(result){
 		printf("\033[1;36mvshell >\033[0m ");
 		fflush(stdout);
@@ -67,14 +71,17 @@ int executecmd(char *linea){
 	char *cmd;
 	char *arg1;
 	char *arg2;
+	char *arg3;
 	char *search = " ";
 
 	cmd = strtok(linea, " ");
 	arg1 = strtok(NULL, " ");
 	arg2 = strtok(NULL, " ");
+	arg3 = strtok(NULL, " ");
 
 	if(strcmp(cmd, "exit") == 0)
 		return 0;
+
 	if(strcmp(cmd, "copy") == 0){
 		if(arg1 == NULL || arg2 == NULL){
 			fprintf(stderr, "Error en los argumentos\n");
@@ -107,17 +114,40 @@ int executecmd(char *linea){
 	}
 
 	if(strcmp(cmd, "dir") == 0){
-		if(arg1 == NULL)
+		if(arg1 == NULL || isinvd(arg1))
 			dirv();
 		else if(!isinvd(arg1))
 			diru(&arg1[2]);
 	}
 
 	if(strcmp(cmd, "delete") == 0){
+		if(arg1 == NULL){
+			fprintf(stderr, "Error en los argumentos\n");
+			return 1;
+		}
+		if(strcmp(arg1, "*") == 0){
+			delete_all_v();
+		}else{
+			if(isinvd(arg1))
+				vdunlink(arg1);
+			else
+				unlink(&arg1[2]);
+		}
+	}
+
+	if(strcmp(cmd,"offset")==0)
+	{
+		if(arg1 == NULL || arg2 == NULL || arg3 == NULL){
+			fprintf(stderr, "Error en los argumentos\n");
+			return 1;
+		}
+
 		if(isinvd(arg1))
-			vdunlink(arg1);
-		else
-			unlink(&arg1[2]);
+			offsetv(arg1,arg2, arg3);		
+	}
+
+	if(strcmp(cmd,"clear")==0){
+		printf("\033[2J\033[0;0H");
 	}
 	return 1;
 }
@@ -136,7 +166,16 @@ int copyuu(char *arg1, char *arg2){
 	int ncars;
 
 	sfile = open(arg1, 0);
+
+	if(sfile == -1){
+		printf("El archivo no existe en UNIX\n");
+		return 1;
+	}
 	dfile = creat(arg2, 0640);
+	if(dfile == -1){
+		printf("El archivo no se creó correctamente\n");
+		return 1;
+	}
 
 	do{
 		ncars = read(sfile, buffer, BUFFERSIZE);
@@ -151,14 +190,23 @@ int copyuu(char *arg1, char *arg2){
 int copyuv(char *arg1, char *arg2){
 	int sfile, dfile;
 	char buffer[BUFFERSIZE];
-	int ncars;
+	int ncars, ret;
+	
 	sfile = open(arg1,0);
+	if(sfile == -1){
+		printf("El archivo no existe en UNIX\n");
+		return 1;
+	}
+
 	dfile = vdcreat(arg2, 0640);
+	if(dfile == -1)
+		return 1;
+	
 
 	do{
 		ncars = read(sfile, buffer, BUFFERSIZE);
-		vdwrite(dfile, buffer, ncars);
-	}while(ncars == BUFFERSIZE);
+		ret = vdwrite(dfile, buffer, ncars);
+	}while(ncars == BUFFERSIZE && ret!= -1);
 	close(sfile);
 	vdclose(dfile);
 	return 1;
@@ -186,17 +234,21 @@ int copyvu(char *arg1, char *arg2){
 
 //Copia entre archivos de disco virtual
 int copyvv(char *arg1, char *arg2){
-	int sfile, dfile;
+	int sfile, dfile, ret;
 	char buffer[BUFFERSIZE];
 	int ncars;
 
 	sfile=vdopen(arg1, 0);
+	if(sfile == -1)
+		return 1;
 	dfile = vdcreat(arg2, 0640);
-	vdseek(sfile, 0, 0);
+	if(dfile == -1)
+		return 1;
+	
 	do{
 		ncars = vdread(sfile, buffer, BUFFERSIZE);
-		vdwrite(dfile, buffer, ncars);
-	}while(ncars == BUFFERSIZE);
+		ret = vdwrite(dfile, buffer, ncars);
+	}while(ncars == BUFFERSIZE && ret!= -1);
 	vdclose(sfile);
 	vdclose(dfile);
 	return 1;
@@ -208,7 +260,9 @@ int catv(char *arg1){
 	char buffer[BUFFERSIZE];
 
 	sfile = vdopen(arg1,0);
-	vdseek(sfile, 0, 0);
+	if(sfile == -1)
+		return 1;
+
 	do{
 		ncars = vdread(sfile, buffer, BUFFERSIZE);
 		DEBUG("ncars = %d\n", ncars);
@@ -224,6 +278,9 @@ int catu(char *arg1){
 	char buffer[BUFFERSIZE];
 
 	sfile = open(arg1,0);
+	if(sfile == -1)
+		return 1;
+
 	do{
 		ncars = read(sfile, buffer, BUFFERSIZE);
 		write(1, buffer, ncars);
@@ -232,7 +289,17 @@ int catu(char *arg1){
 	return 1;
 }
 
+//Elimina todos los archivos del filesystem
+int delete_all_v(){
+	int end = nextfreeinode();
+	if (end == -1)
+		end = 64;
+	for(int i=0; i < end; i++)
+		vdunlink(inodes[i].name);
+	return 1;
+}
 
+//Muestra todos los archivos de la carpeta
 int dirv(){
 	dir_root();
 }
@@ -256,13 +323,36 @@ int diru(char *arg1){
 
 	while((entry=readdir(dd))!=NULL){
 		if(entry->d_type == 4)
-			printf("\033[1;32m%8d\t%30s\t%5d\n\033[0m", entry->d_ino,entry->d_name,"dir");
+			printf("\033[1;32m%8d\t%30s\t%5s\n\033[0m", entry->d_ino,entry->d_name,"dir");
 		else
 
-		printf("%8d\t%30s\t%5d\n", entry->d_ino,entry->d_name,"file");
+		printf("%8d\t%30s\t%5s\n", entry->d_ino,entry->d_name,"file");
 		entries++;
 	}
 	printf("---------------------------------------------------------------\n");
 	printf("Total: %d\n", entries);
 	closedir(dd);
 }
+
+//Despliega contenido de un archivo virtual a partir del offset y whence dado
+int offsetv(char *arg1, char *arg2, char *arg3){
+	int sfile, ncars, ret;
+	char buffer[BUFFERSIZE];
+
+	sfile = vdopen(arg1,0);
+	if(sfile == -1)
+		return 1;
+
+	ret = vdseek(sfile, atoi(arg2), atoi(arg3));
+	if(ret == -1)
+		return 1;
+
+	do{
+		ncars = vdread(sfile, buffer, BUFFERSIZE);
+		DEBUG("ncars = %d\n", ncars);
+		write(1, buffer, ncars);
+	}while(ncars == BUFFERSIZE);
+	vdclose(sfile);
+	return 1;
+}
+

@@ -15,7 +15,7 @@ extern unsigned char mapa_bits_bloques [SECTOR_SIZE * 2];
 extern struct INODE inodes[INODE_SIZE];
 
 
-
+//Carga la tabla de archivos abiertos
 void init_open_files_table(){
 	if(!openfiles_inicializada){
 		for(int i=3; i<16;i++){
@@ -25,16 +25,6 @@ void init_open_files_table(){
 		openfiles_inicializada = 1;
 	}
 	
-}
-
-//Función que obtiene el gid
-int getgid(){
-	return 022;
-}
-
-//Función que obtiene el uid
-int getuid(){
-	return 022;
 }
 
 //Obtiene un descriptor de archivo libre
@@ -60,7 +50,7 @@ unsigned short *postoptr(int fd,int pos){
 
 	currinode = openfiles[fd].inode;
 
-	if((pos/1024)>=2068){
+	if(pos >2117632){
 		fprintf(stderr, "El archivo ha alcanzado su tamaño máximo\n");
 		return NULL;
 	}
@@ -199,25 +189,26 @@ int vdseek(int fd, int offset, int whence){
 	}
 
 	oldblock = *currpostoptr(fd);
-
+	//Offset a partir de posición cero. Admite valores positivos.
 	if(whence == 0){
-		if(offset < 0 || 
-		   openfiles[fd].currpos+offset > inodes[openfiles[fd].inode].size){
-			DEBUG("vdseek: Error whence 0\n");
+		if(offset < 0 || offset > inodes[openfiles[fd].inode].size){
+			fprintf(stderr, "vdseek: Error whence 0\n");
 			return -1;
 		}
 		openfiles[fd].currpos = offset;
+	//Offset a partir de posición actual. Admite valores positivos y negativos
 	}else if(whence == 1){
 			if(openfiles[fd].currpos+offset > inodes[openfiles[fd].inode].size
 			  || openfiles[fd].currpos+offset < 0){
-				DEBUG("vdseek: Error whence 1\n");
+				fprintf(stderr, "vdseek: Error whence 1\n");
 				return -1;
 			}
 			openfiles[fd].currpos+=offset;
+	//Puntero a partir del final del archivo.
+	//Admite solo positivos
 	}else if(whence == 2){
-		if(offset > inodes[openfiles[fd].inode].size ||
-			openfiles[fd].currpos-offset < 0){
-			DEBUG("vdseek: Error whence 2\n");
+		if(offset > inodes[openfiles[fd].inode].size || offset < 0){
+			fprintf(stderr, "vdseek: Error whence 2\n");
 			return -1;
 		}
 		openfiles[fd].currpos = inodes[openfiles[fd].inode].size-offset;
@@ -270,6 +261,9 @@ int vdwrite(int fd, char *buffer, int bytes){
 		//Si el bloque está en blanco, asignarle un nuevo bloque
 		if(currblock == 0){
 			currblock = nextfreeblock();
+			if(currblock == -1)
+				return -1;
+			
 			*currptr = currblock;
 			DEBUG("Asignando nuevo bloque %d\n", currblock);
 
@@ -354,8 +348,10 @@ int vdread(int fd, char *buffer, int bytes){
 			openfiles[fd].currbloqueenmemoria = currblock;
 		}
 
-		if(openfiles[fd].buffer[openfiles[fd].currpos%2048] == '\0')
+		//Si encuentra el caracter nulo, salir
+		if(openfiles[fd].buffer[openfiles[fd].currpos%2048] == '\0'){
 			return cnt;
+		}
 
 		//Copiar al buffer el caracter actual
 		buffer[cnt] = openfiles[fd].buffer[openfiles[fd].currpos%2048];
@@ -365,6 +361,10 @@ int vdread(int fd, char *buffer, int bytes){
 		openfiles[fd].currpos++;
 		//Incrementar puntero
 		cnt++;
+
+		//Si ya se leyó todo el archivo, salir
+		if(openfiles[fd].currpos == inodes[currinode].size)
+			break;
 
 	}
 	return cnt;
@@ -388,8 +388,10 @@ int vdclose(int fd){
 
 	sector = (int)(currinode/8);
 	DEBUG("Close: sector = %d %d  %d\n", sector, (get_secl_tabla_nodos_i()+sector),sector*8 );
+	//Escribir sector lógico donde está el nodo i
 	vdwritesl((get_secl_tabla_nodos_i()+sector),(char *) &inodes[sector*8]);
-
+	//Escribir el bloque que se encuentra en buffer si es que
+	//es diferente al actual
 	currblock = openfiles[fd].currbloqueenmemoria;
 	if(currblock != -1){
 		buffer = calloc(2048, sizeof(char));
@@ -399,9 +401,11 @@ int vdclose(int fd){
 			writeblock(currblock, openfiles[fd].buffer);
 		}
 	}
+	//Copiar buffer de indirectos si está cargado
 	if (inodes[currinode].indirect1 != 0)
 		writeblock(inodes[currinode].indirect1, 
 				  (char *) openfiles[fd].buffindirect);
+	//Limpiar tabla de archivos
 	openfiles[fd].inuse = 0;
 	openfiles[fd].currbloqueenmemoria = -1;
 	memset(openfiles[fd].buffer,0,2048);
@@ -410,20 +414,23 @@ int vdclose(int fd){
 	return 1;
 }
 
-//
+//Función que itera sobre los nodos i para imprimir los archivos
 int dir_root(){
 	load_sec_boot();
 	load_sec_mapa_nodosi();
 	load_inodes();
 	int i, j, nfiles;
-	printf("%6s\t%20s\t%8s\n", "Nodo i","Nombre de Archivo","Tam");
-	printf("----------------------------------------------------\n");
+	printf("%6s\t%20s\t%8s\t%5s\t%5s\n", 
+		   "Nodo i","Nombre de Archivo","Tam", "UID", "GID");
+	printf("-------------------------------------------------------------\n");
 	for(i=0, nfiles=0; i< INODE_SIZE; i++)
 		if(mapa_bits_nodosi[i/8] & 1<<(i%8)){
-			printf("%6d\t%20s\t%8d\n", i, inodes[i].name,inodes[i].size);
+			printf("%6d\t%20s\t%8d\t%5d\t%5d\n", 
+					i, inodes[i].name,inodes[i].size, 
+					inodes[i].uid, inodes[i].gid);
 			nfiles++;
 		}
-	printf("----------------------------------------------------\n");
+	printf("-------------------------------------------------------------\n");
 	printf("Total: %d\n", nfiles);
 
 	return 1;
