@@ -16,7 +16,7 @@ formatvd: formatvd.c vdisk.h vdisk.c
 	gcc -o formatvd formatvd.c vdisk.h vdisk.c filesystem.h -std=gnu99
 
 gui: vdisk.h vdisk.c filesystem.h filesystem.c Archivos.c Archivos.h gui_utils.h gui_utils.c gui.h gui.c
-	gcc -o gui vdisk.h vdisk.c filesystem.h filesystem.c Archivos.c Archivos.h gui_utils.h gui_utils.c gui.h gui.c `pkg-config --libs --cflags gtk+-2.0` -std=gnu99 -Wimplicit-function-declaration
+	gcc -o gui vdisk.h vdisk.c filesystem.h filesystem.c Archivos.c Archivos.h gui_utils.h gui_utils.c gui.h gui.c `pkg-config --cflags gtk+-3.0` `pkg-config --libs gtk+-3.0` -std=gnu99
 
 
 shell: 	filesystem.h filesystem.c vdisk.h vdisk.c Archivos.c Archivos.h
